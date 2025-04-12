@@ -413,6 +413,35 @@ Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con
 ## Mitigación de Unsafe Deserialization
 ---
 
+### Validación de datos:
+
+Si queremos mitigar realmente ese problema (que no se puedan añadir propiedades inesperadas), una estrategia efectiva es usar la interfaz Serializable o __wakeup() junto con la visibilidad privada o protegida de las propiedades, y una validación explícita del contenido deserializado.
+
+Aquí tienes una versión que:
+
+- Usa propiedades privadas
+
+- Implementa la interfaz Serializable
+
+- Valida manualmente los datos antes de restaurarlos
+
+- Impide que se inyecten propiedades no autorizadas
+
+Escribimos **GenerarObjeto2.php**:
+
+
+~~~
+
+
+~~~
+✅ ¿Qué mejora esta versión?
+
+- No se pueden inyectar propiedades personalizadas, ya que solo se deserializa lo que explícitamente se espera.
+
+- No hay ejecución de comandos.
+
+- Control total de cómo se deserializa el objeto.
+
 ### Utilizando JSON 
 ---
 La mejor forma de evitar ataques de deserialización insegura es NO usar unserialize() con datos externos.
@@ -493,6 +522,90 @@ http://localhost/deserialize_full.php?data={"username":"hacker","isAdmin":true, 
 Si se detecta un parámetro no permitido (bypass en este caso), se muestra el error:
 
 `Error: Clave inválida detectada`
+
+Usar JSON en lugar de serialize()/unserialize() es una de las mejores formas de evitar la deserialización insegura, ya que JSON solo representa datos, no objetos con métodos o comportamientos.
+
+Aquí te dejo el ejercicio modificado con mitigación basada en JSON, incluyendo validaciones:
+
+🛡️ Parte 2 (alternativa): Código seguro usando JSON
+✅ Código (seguro_json.php)
+php
+Copiar
+Editar
+<?php
+class User {
+    private $username;
+    private $isAdmin = false;
+    private $cmd;
+
+    public function __construct($username, $isAdmin, $cmd) {
+        $this->username = $username;
+        $this->isAdmin = $isAdmin;
+        $this->cmd = $cmd;
+    }
+
+    public function __toString() {
+        return "Usuario: {$this->username}<br>" .
+               "Es administrador: " . ($this->isAdmin ? "Sí" : "No") . "<br>" .
+               "Comando: " . htmlspecialchars($this->cmd);
+    }
+}
+
+if (isset($_GET['data'])) {
+    $json = $_GET['data'];
+
+    $data = json_decode($json, true);
+
+    // Validación de estructura y tipos
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo "JSON mal formado.";
+        exit;
+    }
+
+    if (!isset($data['username'], $data['isAdmin'], $data['cmd']) ||
+        !is_string($data['username']) ||
+        !is_bool($data['isAdmin']) ||
+        !is_string($data['cmd'])) {
+        echo "Datos inválidos.";
+        exit;
+    }
+
+    // Crear objeto validado
+    $user = new User($data['username'], $data['isAdmin'], $data['cmd']);
+
+    echo "<h3>Datos recibidos:</h3>";
+    echo "<pre>{$user}</pre>";
+} else {
+    echo "No se proporciona ningún dato.";
+}
+🧪 Cómo probarlo
+Crea el siguiente payload en un archivo payload.php:
+
+php
+Copiar
+Editar
+<?php
+$data = [
+    "username" => "alumno",
+    "isAdmin" => true,
+    "cmd" => "id" // esto no se ejecutará, solo se mostrará como texto
+];
+echo urlencode(json_encode($data));
+Usa el resultado en el navegador así:
+
+arduino
+Copiar
+Editar
+http://localhost/seguro_json.php?data=[PAYLOAD]
+✅ Ventajas de usar JSON
+No permite ejecutar código, solo transportar datos.
+
+No crea objetos automáticamente, por lo que no hay métodos mágicos como __destruct() que se ejecuten.
+
+Es más legible y portable entre lenguajes.
+
+
+
 
 La ejecución solo se permitirá si los datos contienen exclusivamente **username** y **isAdmin**.
 ![](images/UD.png)
