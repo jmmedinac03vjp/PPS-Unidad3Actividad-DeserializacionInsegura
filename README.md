@@ -441,7 +441,7 @@ Ahora vemos como nos da error en el caso de que intentemos meter los objetos ser
 
 ### ¿Cómo Validar aún más los datos?**
 ---
-Si quieres reforzar aún más la seguridad, puedes validar los datos con una lista blanca. Para ello creamos el archivo **deserialize_full.php**:
+Si quieresmos reforzar aún más la seguridad, puedes validar los datos con una lista blanca. Para ello creamos el archivo **MostrarObjetofull.php**:
 ~~~
 <?php
 class User {
