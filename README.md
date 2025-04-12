@@ -209,6 +209,7 @@ Como podemos ver, del enlace generado, cualquier persona puede saber, el nombre 
 
 Por ejemplo, el usuario Raul podría:
 
+
 **1 - Modificar la serialización**
 
 El objeto serializado es: MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A**0**%3B%7D
@@ -261,7 +262,7 @@ http://localhost/MostrarObjdeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22
 
 Si la clase User tiene un método __destruct(), se puede abusar para ejecutar código en el servidor.
 
-Aquí tenemos nuestra clase modificada con Destruct(). Crea el fichero **GenerarObjeto1.php
+Aquí tenemos nuestra clase modificada con Destruct(). Crea el fichero **GenerarObjeto1.php**
 
 
 ~~~
@@ -317,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <p>
             <strong>Enlace para probar:</strong><br>
-            <a href="MostrarObjeto.php?data=<?= urlencode($serialized) ?>" target="_blank">
+            <a href="MostrarObjeto1.php?data=<?= urlencode($serialized) ?>" target="_blank">
                 MostrarObjeto.php?data=<?= htmlspecialchars(urlencode($serialized)) ?>
             </a>
         </p>
@@ -332,17 +333,8 @@ Este cambio introduce:
 - Una nueva propiedad $cmd que contendrá el comando a ejecutar.
 
 - El método __destruct() que se dispara automáticamente al final del script (cuando el objeto es destruido), lo que lo hace perfecto para ilustrar la explotación por deserialización.
-~~~
 
-class Exploit {
-	public $cmd;
-	public function __destruct() {
-		system($this->cmd);
-	}
-}
-~~~
-
-VAmos a modificar el objeto malicioso para introducir un código a ejecutar. Este archivo lo llamo *explotarGenerarObjeto1.php**:
+Vamos a modificar el objeto malicioso para introducir un código a ejecutar. El atacante de esta manera, podría serializar el objeto introduciendo un código para ejecutar en nuestro servidor, Este archivo lo llamo *explotarGenerarObjeto1.php**:
 
 ~~~
 <?php
@@ -403,7 +395,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <p>
             <strong>Enlace para probar:</strong><br>
-            <a href="MostrarObjeto.php?data=<?= urlencode($serialized) ?>" target="_blank">
+            <a href="MostrarObjeto1.php?data=<?= urlencode($serialized) ?>" target="_blank">
                 MostrarObjeto.php?data=<?= htmlspecialchars(urlencode($serialized)) ?>
             </a>
         </p>
@@ -422,7 +414,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 4. Al deserializarlo en MostrarObjeto.php, se ejecuta automáticamente en el __destruct().
 
-![](images/UD.png)
+![](images/UD7.png)
+
+El atacante habría inyectado en la serialización la ejecución del comando `ls -l /tmp/output.txt`pero podría haber sido cualquier otro comando.
+
+![](images/UD8.png)
+
+Vemos en el resultado que la ejecución no parece anómalo, pero veamos que ha pasado en el servidor.
+
+![](images/UD9.png)
+
+Veamos que contiene el archivo `/tmp/output.txt`. 
+
+Como nosotros extamos usando docker, o bien entramos dentros del servidor apacher y vemos el archivo, o ejecutamos el siguiente comando docker para que nos lo muestre:
+
+~~~
+
+~~~
 
 
 
