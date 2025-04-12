@@ -410,8 +410,91 @@ docker exec -it lamp-php83 /bin/bash -c 'cat /tmp/output.txt'
 Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con el usuario www-data, pero si lo combinamos con otros ataques como escalada de privilegios, podríamos haber ejecutado cualquier comando.
 ---
 
+## Mitigación de Unsafe Deserialization
+---
 
-![](images/UD.png)
+### Utilizando JSON 
+---
+La mejor forma de evitar ataques de deserialización insegura es NO usar unserialize() con datos externos.
+Usar JSON en lugar de serialize().
+
+Creamos el archivo **MostrarObjetoJson.php**:
+
+~~~
+~~~
+
+Vamos a crear también el archivo php desde el que vamos a pasar datos en formato JSON para probar **GenerarObjetoJson.php**:
+
+~~~
+
+~~~
+Ahora vemos como nos da error en el caso de que intentemos meter los objetos serializados en vez de mandarlos en forma de JSON.
+
+![](images/UD11.png)
+
+**Beneficios de Usar JSON**:
+- json_decode() NO ejecuta código PHP, evitando RCE.
+- Validación explícita de los datos, sin riesgo de objetos maliciosos.
+- Mayor compatibilidad con APIs y aplicaciones en otros lenguajes.
+- Evita la ejecución de métodos mágicos como __wakeup() y __destruct().
+
+
+### ¿Cómo Validar aún más los datos?**
+---
+Si quieres reforzar aún más la seguridad, puedes validar los datos con una lista blanca. Para ello creamos el archivo **deserialize_full.php**:
+~~~
+<?php
+class User {
+public $username;
+public $isAdmin = false;
+}
+// Obtener y decodificar JSON de manera segura
+$json = $_GET['data'] ?? '{}';
+$data = json_decode($json, true);
+// Validar que la decodificación haya sido correcta y que sea un array
+if (!is_array($data)) {
+die("Error: Formato de datos inválido.");
+}
+// Validación estricta de claves permitidas
+$validKeys = ['username', 'isAdmin'];
+foreach ($data as $key => $value) {
+if (!in_array($key, $validKeys, true)) { // 'true' para comparación estricta
+die("Error: Clave inválida detectada ('$key').");
+}
+}
+// Validación estricta de tipo de datos
+if (!isset($data['username']) || !is_string($data['username'])) {
+die("Error: Username debe ser una cadena de texto.");
+}
+if (!isset($data['isAdmin']) || !is_bool($data['isAdmin'])) {
+die("Error: isAdmin debe ser un booleano (true/false).");
+}
+// Verificación segura de acceso
+if ($data['isAdmin'] === true) { // Comparación estricta
+echo "¡Acceso de administrador concedido!";
+} else {
+echo "Acceso normal.";
+}
+?>
+~~~
+
+Esto previene la inyección de datos inesperados en el JSON.
+
+
+**Explicación de la Validación de Claves**
+---
+
+Evita que el atacante agregue parámetros no esperados, como: 
+
+~~~
+http://localhost/deserialize_full.php?data={"username":"hacker","isAdmin":true, "bypass":"0"}
+~~~
+
+Si se detecta un parámetro no permitido (bypass en este caso), se muestra el error:
+
+`Error: Clave inválida detectada`
+
+La ejecución solo se permitirá si los datos contienen exclusivamente **username** y **isAdmin**.
 ![](images/UD.png)
 ![](images/UD.png)
 ![](images/UD.png)
