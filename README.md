@@ -38,7 +38,7 @@ Vamos realizando operaciones:
 
 ### Iniciar entorno de pruebas
 
--Situáte en la carpeta de del entorno de pruebas de nuestro servidor LAMP e inicia el esce>
+-Situáte en la carpeta de del entorno de pruebas de nuestro servidor LAMP e inicia el escenario multicontenedor escribiendo en el terminal de comandos o en el PowerShell:
 
 ~~~
 docker-compose up -d
@@ -54,20 +54,11 @@ La vulnerabilidad se explota en la deserialización de los datos de usuario sin 
 
 Para mostrar las variables del objeto serializado vamos a crear un archivo vulnerable con nombre **MostrarObjeto.php** con el siguiente contenido:
 ~~~
-  GNU nano 7.2                                                                           MostrarObjeto.php                                                                                    
 <?php
 class User {
     public $username;
     public $isAdmin = false;
-    public $cmd;
 
-    public function __destruct() {
-        if (!empty($this->cmd)) {
-            // echo "<pre>Ejecutando comando: {$this->cmd}\n";
-            system($this->cmd);
-            //echo "</pre>";
-        }
-    }
 }
 
 if (isset($_GET['data'])) {
@@ -79,14 +70,15 @@ if (isset($_GET['data'])) {
     print_r($obj);
     echo "</pre>";
 
-    // Opcional: forzar destrucci  n
+    // Opcional: forzar destrucción
     unset($obj);
 } else {
-    echo "No se proporciona  ningun dato.";
+    echo "No se proporciona� ningun dato.";
 }
+
 ~~~
 
-También vamos a crear un archivo con nombre GenerarObjeto.php
+También vamos a crear un archivo con nombre GenerarObjeto.php para visualizar los datos serializados y mostrar un enlace a MostrarObjeto.php
 ~~
 <?php
 class User {
@@ -233,7 +225,7 @@ http://localhost/MostrarObjdeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22
 
 **Intentar RCE con __destruct()**
 
-Si la clase User tiene un método __destruct(), se puede abusar para ejecutar código en el servidor.
+Si la clase User tiene un método __destruct(), se puede abusar para ejecutar código en el servidor. Este es el riesgo mayor al explotar la deserialización.
 
 Aquí tenemos nuestra clase modificada con Destruct(). Crea el fichero **GenerarObjeto1.php**
 
@@ -413,11 +405,99 @@ Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con
 ## Mitigación de Unsafe Deserialization
 ---
 
-### Validación de datos:
-
+### ¿Cómo Validar aún los datos?**
+---
 Si queremos mitigar realmente ese problema (que no se puedan añadir propiedades inesperadas), una estrategia efectiva es usar la interfaz Serializable o __wakeup() junto con la visibilidad privada o protegida de las propiedades, y una validación explícita del contenido deserializado.
 
-Aquí tienes una versión que:
+
+Este código:
+
+- Aún usa unserialize() (para propósitos educativos).
+
+- Valida que el objeto es de la clase esperada.
+
+- Valida que las propiedades están bien formadas (por tipo y existencia).
+
+- Aún permite ver el riesgo de __destruct() si no se valida bien.
+
+Para ello creamos el archivo **MostrarObjeto2.php**:
+
+~~~
+<?php
+class User {
+    public $username;
+    public $isAdmin = false;
+
+    public function __destruct() {
+        if (!empty($this->cmd)) {
+            echo "<pre>Ejecutando comando (simulado): {$this->cmd}</pre>";
+            // system($this->cmd); // ← mantener comentado para pruebas seguras
+        }
+    }
+}
+
+if (isset($_GET['data'])) {
+    $data = $_GET['data'];
+
+    // Deserialización segura: solo se permite la clase User
+    $obj = @unserialize($data, ['allowed_classes' => ['User']]);
+
+    if (!$obj instanceof User) {
+        echo "Error: El objeto deserializado no es de tipo User.";
+        exit;
+    }
+
+    // Propiedades permitidas
+    $propiedadesPermitidas = ['username', 'isAdmin'];
+
+    // Obtener propiedades reales del objeto deserializado
+    $propiedadesObjeto = array_keys(get_object_vars($obj));
+
+    // Verificar que no hay propiedades adicionales
+    $propiedadesExtra = array_diff($propiedadesObjeto, $propiedadesPermitidas);
+
+    if (!empty($propiedadesExtra)) {
+        echo "<h3>Error:</h3>";
+        echo "El objeto contiene propiedades no permitidas: <pre>" . implode(", ", $propiedadesExtra) . "</pre>";
+        exit;
+    }
+
+    // Validar tipos de propiedades
+    $errores = [];
+
+    if (!isset($obj->username) || !is_string($obj->username)) {
+        $errores[] = "El campo 'username' no está definido o no es una cadena.";
+    }
+
+    if (!isset($obj->isAdmin) || !is_bool($obj->isAdmin)) {
+        $errores[] = "El campo 'isAdmin' no está definido o no es booleano.";
+    }
+
+
+    if (!empty($errores)) {
+        echo "<h3>Errores de validación:</h3><ul>";
+        foreach ($errores as $e) {
+            echo "<li>" . htmlspecialchars($e) . "</li>";
+        }
+        echo "</ul>";
+        exit;
+    }
+
+    echo "<h3>Objeto deserializado válidamente:</h3>";
+    echo "<pre>";
+    print_r($obj);
+    echo "</pre>";
+
+    // Forzar destrucción
+    unset($obj);
+} else {
+    echo "No se proporciona ningún dato.";
+}
+
+
+
+
+Esta versión:
 
 - Usa propiedades privadas
 
@@ -426,6 +506,23 @@ Aquí tienes una versión que:
 - Valida manualmente los datos antes de restaurarlos
 
 - Impide que se inyecten propiedades no autorizadas
+
+
+
+**Explicación de la Validación de Claves**
+---
+
+
+~~~
+http://localhost/deserialize_full.php?data={"username":"hacker","isAdmin":true, "bypass":"0"}
+~~~
+
+Si se detecta un parámetro no permitido (bypass en este caso), se muestra el error:
+
+`Error: Clave inválida detectada`
+
+### Validación de datos:
+
 
 Escribimos **GenerarObjeto2.php**:
 
@@ -445,7 +542,10 @@ Escribimos **GenerarObjeto2.php**:
 ### Utilizando JSON 
 ---
 La mejor forma de evitar ataques de deserialización insegura es NO usar unserialize() con datos externos.
+
 Usar JSON en lugar de serialize().
+
+Además, si quieresmos reforzar aún más la seguridad, podemos validar los datos con una lista blanca. 
 
 Creamos el archivo **MostrarObjetoJson.php**:
 
@@ -468,60 +568,6 @@ Ahora vemos como nos da error en el caso de que intentemos meter los objetos ser
 - Evita la ejecución de métodos mágicos como __wakeup() y __destruct().
 
 
-### ¿Cómo Validar aún más los datos?**
----
-Si quieresmos reforzar aún más la seguridad, puedes validar los datos con una lista blanca. Para ello creamos el archivo **MostrarObjetofull.php**:
-~~~
-<?php
-class User {
-public $username;
-public $isAdmin = false;
-}
-// Obtener y decodificar JSON de manera segura
-$json = $_GET['data'] ?? '{}';
-$data = json_decode($json, true);
-// Validar que la decodificación haya sido correcta y que sea un array
-if (!is_array($data)) {
-die("Error: Formato de datos inválido.");
-}
-// Validación estricta de claves permitidas
-$validKeys = ['username', 'isAdmin'];
-foreach ($data as $key => $value) {
-if (!in_array($key, $validKeys, true)) { // 'true' para comparación estricta
-die("Error: Clave inválida detectada ('$key').");
-}
-}
-// Validación estricta de tipo de datos
-if (!isset($data['username']) || !is_string($data['username'])) {
-die("Error: Username debe ser una cadena de texto.");
-}
-if (!isset($data['isAdmin']) || !is_bool($data['isAdmin'])) {
-die("Error: isAdmin debe ser un booleano (true/false).");
-}
-// Verificación segura de acceso
-if ($data['isAdmin'] === true) { // Comparación estricta
-echo "¡Acceso de administrador concedido!";
-} else {
-echo "Acceso normal.";
-}
-?>
-~~~
-
-Esto previene la inyección de datos inesperados en el JSON.
-
-
-**Explicación de la Validación de Claves**
----
-
-Evita que el atacante agregue parámetros no esperados, como: 
-
-~~~
-http://localhost/deserialize_full.php?data={"username":"hacker","isAdmin":true, "bypass":"0"}
-~~~
-
-Si se detecta un parámetro no permitido (bypass en este caso), se muestra el error:
-
-`Error: Clave inválida detectada`
 
 Usar JSON en lugar de serialize()/unserialize() es una de las mejores formas de evitar la deserialización insegura, ya que JSON solo representa datos, no objetos con métodos o comportamientos.
 
