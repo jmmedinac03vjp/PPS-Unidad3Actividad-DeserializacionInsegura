@@ -147,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 Vemos como el objeto serializado sería: `O:4:"User":2:{s:8:"username";s:4:"Raul";s:7:"isAdmin";b:0;}`
 
-y nos dá el enlace parar probarlo, enviándolo a MostrarObjeto.php
+... y nos dá el enlace parar probarlo, enviándolo a MostrarObjeto.php
 
 ~~~
 http://localhost/MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A0%3B%7D
@@ -156,6 +156,7 @@ http://localhost/MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22u
 ![](images/UD4.pg)
 
 ~~~
+
 ##  Explotación de Deserialización Insegura
 ---
 
@@ -173,13 +174,19 @@ Como podemos ver, del enlace generado, cualquier persona puede saber, el nombre 
 Por ejemplo, el usuario Raul podría:
 
 
-**1 - Modificar la serialización**
+**1 - Modificar la serialización.**
 
-El objeto serializado es: MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A**0**%3B%7D
+El objeto serializado es: 
 
-Cambiar los datos del valor IsAdmin:
+~~~
+MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A**0**%3B%7D
+~~~
 
+Podemos cambiar los datos del valor IsAdmin:
+
+~~~
 MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A**1**%3B%7D 
+~~~
 
 ![](images/UD6.png)
 
@@ -205,6 +212,8 @@ Salida esperada (ejemplo):
 ~~~
 O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A6%3A%22hacker%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A1%3B%7D
 ~~~
+
+Este objeto serializado podemos usarlo para enviarlo a MostrarObjeto.php y así hacker sería administrador.
 
 ![](images/UD6.png)
 
@@ -285,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <p>
             <strong>Enlace para probar:</strong><br>
-            <a href="MostrarObjeto1.php?data=<?= urlencode($serialized) ?>" target="_blank">
+            <a href="MostrarObjeto.php?data=<?= urlencode($serialized) ?>" target="_blank">
                 MostrarObjeto.php?data=<?= htmlspecialchars(urlencode($serialized)) ?>
             </a>
         </p>
@@ -422,7 +431,7 @@ Este código:
 
 - Aún permite ver el riesgo de __destruct() si no se valida bien.
 
-Para ello creamos el archivo **MostrarObjeto2.php**:
+Para ello creamos el archivo **MostrarObjeto1.php**:
 
 ~~~
 <?php
@@ -523,16 +532,9 @@ Si se detecta un parámetro no permitido (bypass en este caso), se muestra el er
 
 `Error: Clave inválida detectada`
 
-### Validación de datos:
+![](images/UD12.png)
 
 
-Escribimos **GenerarObjeto2.php**:
-
-
-~~~
-
-
-~~~
 ✅ ¿Qué mejora esta versión?
 
 - No se pueden inyectar propiedades personalizadas, ya que solo se deserializa lo que explícitamente se espera.
@@ -541,8 +543,10 @@ Escribimos **GenerarObjeto2.php**:
 
 - Control total de cómo se deserializa el objeto.
 
+
 ### Utilizando JSON 
 ---
+
 La mejor forma de evitar ataques de deserialización insegura es NO usar unserialize() con datos externos.
 
 Usar JSON en lugar de serialize().
