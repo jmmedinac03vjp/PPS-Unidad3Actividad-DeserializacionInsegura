@@ -146,7 +146,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ![](images/UD3.png)
 
-Vemos como el objeto serializado sería: `O:4:"User":2:{s:8:"username";s:4:"Raul";s:7:"isAdmin";b:0;}`
+Vemos como el objeto serializado sería: 
+
+
+`O:4:"User":2:{s:8:"username";s:4:"Raul";s:7:"isAdmin";b:0;}`
 
 ... y nos dá el enlace parar probarlo, enviándolo a MostrarObjeto.php
 
@@ -228,7 +231,7 @@ Al mandarlo, tendríamos el mismo resultado, Hacker se convierte en `Admin`.
 
 ~~~
 http://localhost/MostrarObjdeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A6%3A%22hacker%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A1%3B%7D
-~~
+~~~
 
 
 ![](images/UD2.png)
