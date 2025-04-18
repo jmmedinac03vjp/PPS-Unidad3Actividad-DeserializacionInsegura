@@ -53,6 +53,7 @@ La vulnerabilidad aparece debido a la creación de objetos, de manera que para p
 La vulnerabilidad se explota en la deserialización de los datos de usuario sin validación (unserialize($_GET['data'])) y permite modificar el objeto y otorgar privilegios no autorizados.
 
 Para mostrar las variables del objeto serializado vamos a crear un archivo vulnerable con nombre **MostrarObjeto.php** con el siguiente contenido:
+
 ~~~
 <?php
 class User {
@@ -79,7 +80,8 @@ if (isset($_GET['data'])) {
 ~~~
 
 También vamos a crear un archivo con nombre GenerarObjeto.php para visualizar los datos serializados y mostrar un enlace a MostrarObjeto.php
-~~
+
+~~~
 <?php
 class User {
     public $username;
