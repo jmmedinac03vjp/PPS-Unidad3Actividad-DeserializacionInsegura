@@ -554,37 +554,9 @@ Usar JSON en lugar de serialize().
 
 Además, si quieresmos reforzar aún más la seguridad, podemos validar los datos con una lista blanca. 
 
-Creamos el archivo **MostrarObjetoJson.php**:
+✅ Creamos el archivo **MostrarObjetoJson.php**:
 
 ~~~
-~~~
-
-Vamos a crear también el archivo php desde el que vamos a pasar datos en formato JSON para probar **GenerarObjetoJson.php**:
-
-~~~
-
-~~~
-Ahora vemos como nos da error en el caso de que intentemos meter los objetos serializados en vez de mandarlos en forma de JSON.
-
-![](images/UD11.png)
-
-**Beneficios de Usar JSON**:
-- json_decode() NO ejecuta código PHP, evitando RCE.
-- Validación explícita de los datos, sin riesgo de objetos maliciosos.
-- Mayor compatibilidad con APIs y aplicaciones en otros lenguajes.
-- Evita la ejecución de métodos mágicos como __wakeup() y __destruct().
-
-
-
-Usar JSON en lugar de serialize()/unserialize() es una de las mejores formas de evitar la deserialización insegura, ya que JSON solo representa datos, no objetos con métodos o comportamientos.
-
-Aquí te dejo el ejercicio modificado con mitigación basada en JSON, incluyendo validaciones:
-
-🛡️ Parte 2 (alternativa): Código seguro usando JSON
-✅ Código (seguro_json.php)
-php
-Copiar
-Editar
 <?php
 class User {
     private $username;
@@ -631,12 +603,11 @@ if (isset($_GET['data'])) {
 } else {
     echo "No se proporciona ningún dato.";
 }
-🧪 Cómo probarlo
-Crea el siguiente payload en un archivo payload.php:
+~~~
 
-php
-Copiar
-Editar
+Vamos a crear también el archivo **GenerarObjetoJson.php** que nos creará un objeto JSON Alumno que es administrador:
+
+~~~
 <?php
 $data = [
     "username" => "alumno",
@@ -644,53 +615,76 @@ $data = [
     "cmd" => "id" // esto no se ejecutará, solo se mostrará como texto
 ];
 echo urlencode(json_encode($data));
-Usa el resultado en el navegador así:
 
-arduino
-Copiar
-Editar
-http://localhost/seguro_json.php?data=[PAYLOAD]
-✅ Ventajas de usar JSON
-No permite ejecutar código, solo transportar datos.
+~~~
+🧪 Cómo probarlo
 
-No crea objetos automáticamente, por lo que no hay métodos mágicos como __destruct() que se ejecuten.
+- Acceder al php de generación de JSON:
 
-Es más legible y portable entre lenguajes.
+~~~
+http://localhost/GenerarObjetoJson.php
+~~~
 
+- Objetnemos el JSON:
 
+~~~
+%7B%22username%22%3A%22alumno%22%2C%22isAdmin%22%3Atrue%2C%22cmd%22%3A%22id%22%7D
+~~~
 
+- Concatenar el JSON con la url de MostrarObjetoJson.php
+
+~~~
+http://localhost/MostrarObjetoJson.php?data=%7B%22username%22%3A%22alumno%22%2C%22isAdmin%22%3Atrue%2C%22cmd%22%3A%22id%22%7D
+~~~
 
 La ejecución solo se permitirá si los datos contienen exclusivamente **username** y **isAdmin**.
-![](images/UD.png)
-![](images/UD.png)
-![](images/UD.png)
-![](images/UD.png)
 
-Aquí está el código securizado:
+Ahora nos muestra los datos que hemos introducido. Incluso si hemos intentado introducir un comando para explotar, nos muestra sólo el cómando, no lo ejecuta:
 
-🔒 Medidas de seguridad implementadas
+![](images/UD13.png)
 
-- :
+- Y si probamos  modificando **MostrarObjetoJson.php** para que no esté incluído el comando:
 
-        - 
+~~~
+class User {
+    private $username;
+    private $isAdmin = false;
+    //private $cmd;
+~~~
 
-        - 
+- Al intentar introducir otros atributos dentro del objeto **user** como un comando:
+
+~~~
+http://localhost/MostrarObjetoJson.php?data=%7B%22username%22%3A%22alumno%22%2C%22isAdmin%22%3Atrue%2C%22cmd%22%3A%22id%22%7D
+~~~
+Ahora vemos como nos da error en el caso de que intentemos meter los objetos serializados en vez de mandarlos en forma de JSON.
+
+![](images/UD11.png)
 
 
 
-🚀 Resultado
+✅ Ventajas de usar JSON
 
-✔ 
+- No crea objetos automáticamente, por lo que no hay métodos mágicos como __destruct() que se ejecuten.
 
-✔ 
+- Es más legible y portable entre lenguajes.
 
-✔ 
+- json_decode() NO ejecuta código PHP, evitando RCE.
+
+- Validación explícita de los datos, sin riesgo de objetos maliciosos.
+
+
+
+🚀 **Conclusiones**
+
+Usar JSON en lugar de serialize()/unserialize() es una de las mejores formas de evitar la deserialización insegura, ya que JSON solo representa datos, no objetos con métodos o comportamientos.
+
 
 ## ENTREGA
 
 > __Realiza las operaciones indicadas__
 
-> __Crea un repositorio  con nombre PPS-Unidad3Actividad6-Tu-Nombre donde documentes la realización de ellos.__
+> __Crea un repositorio  con nombre PPS-Unidad3Actividad-Tu-Nombre donde documentes la realización de ellos.__
 
 > No te olvides de documentarlo convenientemente con explicaciones, capturas de pantalla, etc.
 
