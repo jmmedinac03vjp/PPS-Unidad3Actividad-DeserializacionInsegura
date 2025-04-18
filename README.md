@@ -155,7 +155,6 @@ http://localhost/MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22u
 
 ![](images/UD4.pg)
 
-~~~
 
 ##  Explotación de Deserialización Insegura
 ---
