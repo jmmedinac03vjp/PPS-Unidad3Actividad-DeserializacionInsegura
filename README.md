@@ -418,9 +418,9 @@ Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con
 ## Mitigación de Unsafe Deserialization
 ---
 
-### ¿Cómo Validar aún los datos?**
+### ¿Cómo Validar aún los datos?
 ---
-Si queremos mitigar realmente ese problema (que no se puedan añadir propiedades inesperadas), una estrategia efectiva es usar la interfaz Serializable o __wakeup() junto con la visibilidad privada o protegida de las propiedades, y una validación explícita del contenido deserializado.
+Si queremos mitigar realmente ese problema (que no se puedan añadir propiedades inesperadas), una estrategia efectiva es usar la interfaz **Serializable** o **__wakeup()** junto con la visibilidad privada o protegida de las propiedades, y una validación explícita del contenido deserializado.
 
 
 Este código:
@@ -506,7 +506,7 @@ if (isset($_GET['data'])) {
 } else {
     echo "No se proporciona ningún dato.";
 }
-
+~~~
 
 
 
