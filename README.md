@@ -414,7 +414,6 @@ docker exec -it lamp-php83 /bin/bash -c 'cat /tmp/output.txt'
 ![](images/UD10.png)
 
 Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con el usuario www-data, pero si lo combinamos con otros ataques como escalada de privilegios, podríamos haber ejecutado cualquier comando.
----
 
 ## Mitigación de Unsafe Deserialization
 ---
@@ -525,7 +524,6 @@ Esta versión:
 
 **Explicación de la Validación de Claves**
 ---
-
 
 ~~~
 http://localhost/deserialize_full.php?data={"username":"hacker","isAdmin":true, "bypass":"0"}
