@@ -157,6 +157,9 @@ Vemos como el objeto serializado sería:
 http://localhost/MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22Raul%22%3Bs%3A7%3A%22isAdmin%22%3Bb%3A0%3B%7D
 ~~~
 
+Vemos cómo podemos componer la ruta para mostrar el objeto serializado conctenando:
+`http://localhost/MostrarObjeto.php?data=` con el objeto serializado, en este caso: `O:4:"User":2:{s:8:"username";s:4:"Raul";s:7:"isAdmin";b:0;}`
+
 ![](images/UD4.pg)
 
 
@@ -196,7 +199,7 @@ MostrarObjeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3Bs%3A
 Raul podría haber cambiado su estado, convirtiéndose en administrador.
 
 
-**2 - Crear un archivo para crear la serialización con los datos que desee**
+**2 - Crear un archivo para crear la serialización con los datos que se deseen.**
 
 Crear el archivo **HackerAdmin.php**  y ejecutar este código en la máquina atacante:
 
@@ -239,9 +242,9 @@ http://localhost/MostrarObjdeto.php?data=O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22
 
 **Intentar RCE con __destruct()**
 
-Si la clase User tiene un método __destruct(), se puede abusar para ejecutar código en el servidor. Este es el riesgo mayor al explotar la deserialización.
+Si la clase User tiene un método **__destruct()**, se puede abusar para ejecutar código en el servidor. Este es el riesgo mayor al explotar la deserialización.
 
-Aquí tenemos nuestra clase modificada con Destruct(). Crea el fichero **GenerarObjeto1.php**
+Aquí tenemos nuestra clase modificada con **Destruct()**. Crea el fichero **GenerarObjeto1.php**
 
 
 ~~~
@@ -309,11 +312,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 Este cambio introduce:
 
-- Una nueva propiedad $cmd que contendrá el comando a ejecutar.
+- Una nueva propiedad **$cmd** que contendrá el comando a ejecutar.
 
-- El método __destruct() que se dispara automáticamente al final del script (cuando el objeto es destruido), lo que lo hace perfecto para ilustrar la explotación por deserialización.
+- El método **__destruct()** que se dispara automáticamente al final del script (cuando el objeto es destruido), lo que lo hace perfecto para ilustrar la explotación por deserialización.
 
-Vamos a modificar el objeto malicioso para introducir un código a ejecutar. El atacante de esta manera, podría serializar el objeto introduciendo un código para ejecutar en nuestro servidor, Este archivo lo llamo *explotarGenerarObjeto1.php**:
+Vamos a modificar el objeto malicioso para introducir un código a ejecutar. El atacante de esta manera, podría serializar el objeto introduciendo un código para ejecutar en nuestro servidor, Este archivo lo llamo **explotarGenerarObjeto1.php**:
 
 ~~~
 <?php
@@ -387,11 +390,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 1. Marca "Sí" en la opción de administrador.
 
-2. Escribe un comando como whoami, ls -l, id, etc.
+2. Escribe un comando como **whoami, ls -l, id**, etc.
 
 3. Se serializa el objeto incluyendo ese comando.
 
-4. Al deserializarlo en MostrarObjeto.php, se ejecuta automáticamente en el __destruct().
+4. Al deserializarlo en **MostrarObjeto.php**, se ejecuta automáticamente en el **__destruct(**).
 
 ![](images/UD7.png)
 
@@ -413,19 +416,19 @@ docker exec -it lamp-php83 /bin/bash -c 'cat /tmp/output.txt'
 
 ![](images/UD10.png)
 
-Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con el usuario www-data, pero si lo combinamos con otros ataques como escalada de privilegios, podríamos haber ejecutado cualquier comando.
+Como vemos, hemos podido ejecutar comandos dentro del servidor. En este caso con el usuario **www-data**, pero si lo combinamos con otros ataques como escalada de privilegios, podríamos haber ejecutado cualquier comando.
 
 ## Mitigación de Unsafe Deserialization
 ---
 
-### ¿Cómo Validar aún los datos?
----
+### ¿Cómo Validar los datos?
+
 Si queremos mitigar realmente ese problema (que no se puedan añadir propiedades inesperadas), una estrategia efectiva es usar la interfaz **Serializable** o **__wakeup()** junto con la visibilidad privada o protegida de las propiedades, y una validación explícita del contenido deserializado.
 
 
 Este código:
 
-- Aún usa unserialize() (para propósitos educativos).
+- Aún usa **unserialize()** (sólo lo usamos para propósitos educativos, no debe usarse en un entorno real).
 
 - Valida que el objeto es de la clase esperada.
 
@@ -512,13 +515,13 @@ if (isset($_GET['data'])) {
 
 Esta versión:
 
-- Usa propiedades privadas
+- Usa propiedades privadas.
 
-- Implementa la interfaz Serializable
+- Implementa la interfaz **Serializable**.
 
-- Valida manualmente los datos antes de restaurarlos
+- Valida los datos antes de restaurarlos.
 
-- Impide que se inyecten propiedades no autorizadas
+- Impide que se inyecten propiedades no autorizadas.
 
 
 
@@ -548,9 +551,9 @@ Si se detecta un parámetro no permitido (bypass en este caso), se muestra el er
 ### Utilizando JSON 
 ---
 
-La mejor forma de evitar ataques de deserialización insegura es NO usar unserialize() con datos externos.
+La mejor forma de evitar ataques de deserialización insegura es no usar **unserialize()** con datos externos.
 
-Usar JSON en lugar de serialize().
+Usar *JSON* en lugar de **serialize()**.
 
 Además, si quieresmos reforzar aún más la seguridad, podemos validar los datos con una lista blanca. 
 
@@ -665,11 +668,11 @@ Ahora vemos como nos da error en el caso de que intentemos meter los objetos ser
 
 ✅ Ventajas de usar JSON
 
-- No crea objetos automáticamente, por lo que no hay métodos mágicos como __destruct() que se ejecuten.
+- No crea objetos automáticamente, por lo que no hay métodos mágicos como **__destruct()** que se ejecuten.
 
 - Es más legible y portable entre lenguajes.
 
-- json_decode() NO ejecuta código PHP, evitando RCE.
+- **json_decode()** NO ejecuta código PHP, evitando RCE.
 
 - Validación explícita de los datos, sin riesgo de objetos maliciosos.
 
@@ -677,7 +680,7 @@ Ahora vemos como nos da error en el caso de que intentemos meter los objetos ser
 
 🚀 **Conclusiones**
 
-Usar JSON en lugar de serialize()/unserialize() es una de las mejores formas de evitar la deserialización insegura, ya que JSON solo representa datos, no objetos con métodos o comportamientos.
+Usar JSON en lugar de **serialize()/unserialize()** es una de las mejores formas de evitar la deserialización insegura, ya que **JSON** solo representa datos, no objetos con métodos o comportamientos.
 
 
 ## ENTREGA
