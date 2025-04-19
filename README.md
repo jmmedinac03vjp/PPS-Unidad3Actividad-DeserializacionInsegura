@@ -555,7 +555,7 @@ La mejor forma de evitar ataques de deserialización insegura es no usar **unser
 
 Usar *JSON* en lugar de **serialize()**.
 
-Además, si quieresmos reforzar aún más la seguridad, podemos validar los datos con una lista blanca. 
+Además, si quieresmos reforzar aún más la seguridad, podemos comprobar que las claves que pasamos són únicamente las claves permitidas, así que corresponden con los tipos de datos que deberían. 
 
 ✅ Creamos el archivo **MostrarObjetoJson.php**:
 
@@ -584,12 +584,26 @@ if (isset($_GET['data'])) {
 
     $data = json_decode($json, true);
 
-    // Validación de estructura y tipos
+    // Validar que sea JSON válido
     if (json_last_error() !== JSON_ERROR_NONE) {
         echo "JSON mal formado.";
         exit;
     }
 
+    // Claves permitidas
+    $clavesPermitidas = ['username', 'isAdmin', 'cmd'];
+    $clavesRecibidas = array_keys($data);
+
+    // Verificar si hay claves no permitidas
+    $clavesNoPermitidas = array_diff($clavesRecibidas, $clavesPermitidas);
+
+    if (!empty($clavesNoPermitidas)) {
+        echo "Error: El JSON contiene claves no permitidas: ";
+        echo "<pre>" . implode(", ", $clavesNoPermitidas) . "</pre>";
+        exit;
+    }
+
+    // Validar tipos de datos
     if (!isset($data['username'], $data['isAdmin'], $data['cmd']) ||
         !is_string($data['username']) ||
         !is_bool($data['isAdmin']) ||
@@ -598,7 +612,7 @@ if (isset($_GET['data'])) {
         exit;
     }
 
-    // Crear objeto validado
+    // Crear el objeto
     $user = new User($data['username'], $data['isAdmin'], $data['cmd']);
 
     echo "<h3>Datos recibidos:</h3>";
@@ -652,19 +666,65 @@ Ahora nos muestra los datos que hemos introducido. Incluso si hemos intentado in
 class User {
     private $username;
     private $isAdmin = false;
-    //private $cmd;
 ~~~
 
-- Al intentar introducir otros atributos dentro del objeto **user** como un comando:
+
+- Si quieres puedes utilizar el siguiente código  para crear el objeto de forma interactiva, nos mostrará el enlace a **MostrarObjetoJson.php** con el objeto.
 
 ~~~
-http://localhost/MostrarObjetoJson.php?data=%7B%22username%22%3A%22alumno%22%2C%22isAdmin%22%3Atrue%2C%22cmd%22%3A%22id%22%7D
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Generador de Objeto JSON</title>
+</head>
+<body>
+    <h2>Generar objeto en formato JSON</h2>
+    <form method="post">
+        <label>Nombre de usuario:</label>
+        <input type="text" name="username" required><br><br>
+
+        <label>¿Administrador?</label>
+        <select name="isAdmin">
+            <option value="0">No</option>
+            <option value="1">Sí</option>
+        </select><br><br>
+
+        <button type="submit">Generar</button>
+    </form>
+
+    <?php
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $username = $_POST['username'];
+        $isAdmin = $_POST['isAdmin'] == '1' ? true : false;
+
+        // Puedes agregar más validación aquí si quieres
+
+        $data = [
+            "username" => $username,
+            "isAdmin" => $isAdmin,
+            "cmd" => ""  // Opcionalmente se puede dejar vacío o no incluirlo
+        ];
+
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $encoded = urlencode($json);
+        ?>
+
+        <h3>Objeto JSON generado:</h3>
+        <textarea cols="80" rows="6"><?= htmlspecialchars($json) ?></textarea><br><br>
+
+        <p>
+            <strong>Enlace para probar:</strong><br>
+            <a href="MostrarObjetoJson.php?data=<?= $encoded ?>" target="_blank">
+                MostrarObjetoJson.php?data=<?= htmlspecialchars($encoded) ?>
+            </a>
+        </p>
+    <?php } ?>
+</body>
+</html>
+
 ~~~
-Ahora vemos como nos da error en el caso de que intentemos meter los objetos serializados en vez de mandarlos en forma de JSON.
-
-![](images/UD11.png)
-
-
+![](images/UD14.png)
 
 ✅ Ventajas de usar JSON
 
@@ -676,7 +736,29 @@ Ahora vemos como nos da error en el caso de que intentemos meter los objetos ser
 
 - Validación explícita de los datos, sin riesgo de objetos maliciosos.
 
+➡️  Al intentar introducir otros atributos dentro del objeto **user** otros datos:
+~~~
+<?php
+$data = [
+  "username"=> "pepe",
+  "isAdmin" => false,
+  "cmd" => "id",
+  "extra" => "soy malo 😈"
+];
+echo urlencode(json_encode($data));
+~~~
 
+Tendremos unos datos codificados,  por lo que para probar, tendríamos el siguiente enlace:
+ 
+~~~
+http://localhost/MostrarObjetoJson.php?data=%7B%22username%22%3A%22alumno%22%2C%22isAdmin%22%3Atrue%2C%22cmd%22%3A%22id%22%7D
+~~~
+
+Ahora vemos como nos da error en el caso de que intentemos meter los objetos serializados en vez de mandarlos en forma de JSON.
+
+![](images/UD15.png)
+
+El código no lo detecta como inválido
 
 🚀 **Conclusiones**
 
