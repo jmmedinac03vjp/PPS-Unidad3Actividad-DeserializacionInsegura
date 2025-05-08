@@ -30,7 +30,7 @@ Impacto de la Deserialización Insegura:
 ---
 > Lee detenidamente la sección de vulnerabilidades de subida de archivos.  de la página de PortWigger <https://portswigger.net/web-security/deserialization>
 >
-> Lee el siguiente [documento sobre Explotación y Mitigación de ataques de Remote Code Execution](./files/ExplotacionYMitigacionDeserializacionInsegura.pdf)
+> Lee el siguiente [documento sobre Explotación y Mitigación de ataques de Remote Code Execution](files/ExplotacionMitigacionDeserializacionInsegura.pdf)
 > 
 
 
